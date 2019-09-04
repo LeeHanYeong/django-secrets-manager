@@ -1,0 +1,1 @@
+# django-aws-secrets-manager
