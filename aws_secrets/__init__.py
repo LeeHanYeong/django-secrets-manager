@@ -1,9 +1,10 @@
 import importlib
+import inspect
 import json
 import os
-import threading
+from typing import Iterable, Sequence, Union, Dict
 
-from django.conf import settings, ENVIRONMENT_VARIABLE
+from django.conf import ENVIRONMENT_VARIABLE
 from django.core.exceptions import ImproperlyConfigured
 
 try:
@@ -17,30 +18,6 @@ except ImportError:
         "See https://github.com/boto/boto3")
 
 
-def lookup_env(names):
-    """
-    Look up for names in environment. Returns the first element
-    found.
-    """
-    for name in names:
-        value = os.environ.get(name)
-        if value:
-            return value
-
-
-def setting(name, default=None):
-    """
-    Helper function to get a Django setting by name. If setting doesn't exists
-    it will return a default.
-
-    :param name: Name of setting
-    :type name: str
-    :param default: Value if setting is unfound
-    :returns: Setting's value
-    """
-    return getattr(settings, name, default)
-
-
 class SecretsNameSettingsNotFound(Exception):
     def __str__(self):
         return '"AWS_SECRETS_MANAGER_SECRETS_NAME" value does not exist in settings module'
@@ -51,93 +28,111 @@ class SecretsDoesNotHaveSECRET_KEY(Exception):
         return 'AWS Secrets Does not have "SECRET_KEY"'
 
 
+class SettingKeyNotExists(Exception):
+    def __init__(self, names: Iterable):
+        self.names = names
+
+    def __str__(self):
+        return f'SettingKeyNotExists ({", ".join(self.names)})'
+
+
+def setting(names: Iterable, default=None, settings_module=None, lookup_env=True, raise_exception=False):
+    """
+    Helper function to get a Django setting by name. If setting doesn't exists
+    it will return a default.
+    """
+    if settings_module is None:
+        frame = inspect.stack()[2][0]
+        settings_module = inspect.getmodule(frame)
+
+    for name in names:
+        value = getattr(settings_module, name, None)
+        if value:
+            return value
+
+    if lookup_env:
+        for name in names:
+            value = os.environ.get(name)
+            if value:
+                return value
+
+    if raise_exception:
+        raise SettingKeyNotExists(names)
+
+    return default
+
+
 class Secrets:
     TEMP_SECRET_KEY = 'temp_secret_key'
-    profile_names = ['AWS_SECRETS_MANAGER_PROFILE', 'AWS_PROFILE']
-    access_key_names = ['AWS_SECRETS_MANAGER_ACCESS_KEY_ID', 'AWS_ACCESS_KEY_ID']
-    secret_key_names = ['AWS_SECRETS_MANAGER_SECRET_ACCESS_KEY', 'AWS_SECRET_ACCESS_KEY']
+
+    # Secrets Manager settings
+    secrets_name_names = ('AWS_SECRETS_MANAGER_SECRETS_NAME', 'AWS_SECRETS_NAME')
+    secrets_section_names = ('AWS_SECRETS_MANAGER_SECRETS_SECTION', 'AWS_SECRETS_SECTION')
+
+    # boto3 settings
+    profile_names = ('AWS_SECRETS_MANAGER_PROFILE', 'AWS_PROFILE')
+    access_key_names = ('AWS_SECRETS_MANAGER_ACCESS_KEY_ID', 'AWS_ACCESS_KEY_ID')
+    secret_key_names = ('AWS_SECRETS_MANAGER_SECRET_ACCESS_KEY', 'AWS_SECRET_ACCESS_KEY')
+    region_name_names = ('AWS_SECRETS_MANAGER_REGION_NAME', 'AWS_REGION_NAME')
 
     def __init__(self):
+        self._secrets = {}
         settings_module = os.environ.get(ENVIRONMENT_VARIABLE)
         mod = importlib.import_module(settings_module)
         if not hasattr(mod, 'SECRET_KEY'):
             setattr(mod, 'SECRET_KEY', self.TEMP_SECRET_KEY)
 
-        self._load_settings = False
-        self._connections = threading.local()
-        self._secrets = None
+    def get_client(self, settings_module):
+        profile = setting(self.profile_names, settings_module=settings_module)
+        access_key = setting(self.access_key_names, settings_module=settings_module)
+        secret_key = setting(self.secret_key_names, settings_module=settings_module)
+        region_name = setting(self.region_name_names, settings_module=settings_module)
 
-        self.secrets_name = None
-        self.secrets_section = None
-        self.profile = None
-        self.access_key = None
-        self.secret_key = None
-        self.region_name = None
+        credentials = {}
+        if profile:
+            credentials['profile_name'] = profile
+        else:
+            credentials['aws_access_key_id'] = access_key
+            credentials['aws_secret_access_key'] = secret_key
+        credentials['region_name'] = region_name
+        session = boto3.session.Session(**credentials)
+        return session.client('secretsmanager')
 
-    def load_settings(self):
-        # 보안 암호 이름
-        self.secrets_name = setting('AWS_SECRETS_MANAGER_SECRETS_NAME')
-        # 하나의 Secrets에서 여러 Section을 나누고, 한 Section만 사용하는 경우
-        self.secrets_section = setting('AWS_SECRETS_MANAGER_SECRETS_SECTION')
-
-        self.profile = setting('AWS_SECRETS_MANAGER_PROFILE', setting('AWS_PROFILE'))
-        self.access_key = setting('AWS_SECRETS_MANAGER_ACCESS_KEY_ID', setting('AWS_ACCESS_KEY_ID'))
-        self.secret_key = setting('AWS_SECRETS_MANAGER_SECRET_ACCESS_KEY', setting('AWS_SECRET_ACCESS_KEY'))
-        self.region_name = setting('AWS_SECRETS_MANAGER_REGION_NAME', setting('AWS_REGION_NAME'))
-
-        if not self.secrets_name:
-            raise SecretsNameSettingsNotFound()
-        self.access_key, self.secret_key = self._get_access_keys()
-        self.profile = self.profile or lookup_env(self.profile_names)
-        self._load_settings = True
-
-    def _get_access_keys(self):
+    def get_secrets_section(self, secrets_name: str, sections_string: str, settings_module) -> Union[Sequence, Dict]:
         """
-        Gets the access keys to use when accessing Secrets Manager.
-        If none is provided in the settings then
-         get them from the environment variables.
+        특정 'name'의 Secrets에서, JSON키로 탐색한 Object를 리턴
+         탐색시 중첩레벨의 구분은 ':'을 사용한다
+        :param secrets_name: AWS Secrets Manager의 보안 암호 이름
+        :param sections_string: 해당 보안 암호 JSON에서의 key값 (중첩구조는 콜론(:)으로 구분)
+        :param settings_module:
+        :return: dict or list
         """
-        access_key = self.access_key or lookup_env(self.access_key_names)
-        secret_key = self.secret_key or lookup_env(self.secret_key_names)
-        return access_key, secret_key
-
-    @property
-    def connection(self):
-        connection = getattr(self._connections, 'connection', None)
-        if connection is None:
-            credentials = {}
-            if self.profile:
-                credentials['profile_name'] = self.profile
-            else:
-                credentials['aws_access_key_id'] = self.access_key
-                credentials['aws_secret_access_key'] = self.secret_key
-            credentials['region_name'] = self.region_name
-
-            session = boto3.session.Session(**credentials)
-            self._connections.connection = session.client('secretsmanager')
-        return self._connections.connection
-
-    def load_secrets(self):
-        if not self._load_settings:
-            self.load_settings()
-        secret_string = self.connection.get_secret_value(SecretId=self.secrets_name)['SecretString']
-        secrets_obj = json.loads(secret_string)
-        sections = self.secrets_section.split(':') if self.secrets_section else []
-
+        if secrets_name not in self._secrets:
+            client = self.get_client(settings_module=settings_module)
+            self._secrets[secrets_name] = json.loads(client.get_secret_value(SecretId=secrets_name)['SecretString'])
+        secrets = self._secrets[secrets_name]
+        sections = sections_string.split(':')
         for section in sections:
-            secrets_obj = secrets_obj[section]
-        self._secrets = secrets_obj
+            secrets = secrets[section]
+        return secrets
 
-    @property
-    def secrets(self):
-        if self._secrets is None:
-            self.load_secrets()
-        if 'SECRET_KEY' not in self._secrets:
-            raise SecretsDoesNotHaveSECRET_KEY()
-        return self._secrets
+    def get(self, key, default=None):
+        frame = inspect.stack()[1][0]
+        settings_module = inspect.getmodule(frame)
+
+        secrets_name = setting(self.secrets_name_names, raise_exception=True)
+        secrets_section = setting(self.secrets_section_names)
+        secrets = self.get_secrets_section(secrets_name, secrets_section, settings_module)
+        return secrets.get(key, default)
 
     def __getitem__(self, item):
-        return self.secrets[item]
+        frame = inspect.stack()[1][0]
+        settings_module = inspect.getmodule(frame)
+
+        secrets_name = setting(self.secrets_name_names, raise_exception=True)
+        secrets_section = setting(self.secrets_section_names)
+        secrets = self.get_secrets_section(secrets_name, secrets_section, settings_module)
+        return secrets[item]
 
 
 SECRETS = Secrets()
