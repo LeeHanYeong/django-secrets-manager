@@ -28,6 +28,11 @@ class SecretsDoesNotHaveSECRET_KEY(Exception):
         return 'AWS Secrets Does not have "SECRET_KEY"'
 
 
+class CredentialsNotExists(Exception):
+    def __str__(self):
+        return 'AWS Credentials Not Exists'
+
+
 class SettingKeyNotExists(Exception):
     def __init__(self, names: Iterable):
         self.names = names
@@ -89,11 +94,13 @@ class Secrets:
         region_name = setting(self.region_name_names, settings_module=settings_module)
 
         credentials = {}
-        if profile:
-            credentials['profile_name'] = profile
-        else:
+        if access_key and secret_key:
             credentials['aws_access_key_id'] = access_key
             credentials['aws_secret_access_key'] = secret_key
+        elif profile:
+            credentials['profile_name'] = profile
+        else:
+            raise CredentialsNotExists()
         credentials['region_name'] = region_name
         session = boto3.session.Session(**credentials)
         return session.client('secretsmanager')
