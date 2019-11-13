@@ -14,10 +14,10 @@
 - **AWS_SECRETS_MANAGER_SECRETS_NAME** (or AWS_SECRETS_NAME)
   - Secret name of SecretsManager to use
 - **AWS_SECRETS_MANAGER_SECRETS_SECTION** (or AWS_SECRETS_SECTION)
-  - The key that separates JSON objects by colons.
+  - The key that separates JSON objects by colons.  
     ex) In the example below, the "production" item is represented as **"sample-project:production"**.
 - **AWS_SECRETS_MANAGER_REGION_NAME** (or AWS_REGION_NAME)
-  - [Region](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html) of the SecretsManager service to use
+  - [Region](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html) of the SecretsManager service to use  
     ex) ap-northeast-2
 
 
@@ -91,9 +91,9 @@ Follow the form of the example below
 >
 > ```
 > settings/
->   __init__.py
->   base.py
->   dev.py
+>     __init__.py
+>     base.py
+>     dev.py
 > ```
 
 ```python
