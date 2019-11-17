@@ -110,6 +110,7 @@ AWS_SECRETS_MANAGER_REGION_NAME = 'ap-northeast-2'
 
 # 3. Use SECRETS as a dictionary to get the secrets you want
 SECRET_KEY = SECRETS['SECRET_KEY']
+SECRET_KEY = SECRETS.get('SECRET_KEY')
 ```
 
 ```python
@@ -123,6 +124,7 @@ AWS_SECRETS_MANAGER_SECRETS_SECTION = 'sample-project:dev'
 
 # Use SECRETS as a dictionary to get the secrets you want
 AWS_STORAGE_BUCKET_NAME = SECRETS['AWS_STORAGE_BUCKET_NAME']
+AWS_STORAGE_BUCKET_NAME = SECRETS.get('AWS_STORAGE_BUCKET_NAME', 'default')
 ```
 
 
