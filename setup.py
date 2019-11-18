@@ -18,6 +18,10 @@ setup(
     packages=[
         'aws_secrets',
     ],
+    install_requires=[
+        'boto3',
+        'django',
+    ],
     url='https://github.com/LeeHanYeong/django-aws-secrets-manager',
     zip_safe=True,
     classifiers=[

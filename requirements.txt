@@ -1,3 +1,8 @@
+# install_requires
+boto3
+django
+
+# PyPI deploy
 twine
 setuptools
 wheel
