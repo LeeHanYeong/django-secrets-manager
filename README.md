@@ -1,6 +1,6 @@
-# Django AWS SecretsManager
+# Django SecretsManager
 
-**Django AWS SecretsManager** is a package that helps you manage the secret values used by Django through AWS's SecretsManager service.
+**Django SecretsManager** is a package that helps you manage the secret values used by Django through variable services.
 
 ## Requirements
 
