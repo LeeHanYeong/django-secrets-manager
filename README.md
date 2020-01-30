@@ -11,9 +11,9 @@
 
 ## Required settings for the settings module
 
-- **AWS_SECRETS_MANAGER_SECRETS_NAME** (or AWS_SECRETS_NAME)
+- **AWS_SECRETS_MANAGER_SECRET_NAME** (or AWS_SECRET_NAME)
   - Secret name of SecretsManager to use
-- **AWS_SECRETS_MANAGER_SECRETS_SECTION** (or AWS_SECRETS_SECTION)
+- **AWS_SECRETS_MANAGER_SECRET_SECTION** (or AWS_SECRET_SECTION)
   - The key that separates JSON objects by colons.  
     ex) In the example below, the "production" item is represented as **"sample-project:production"**.
 - **AWS_SECRETS_MANAGER_REGION_NAME** (or AWS_REGION_NAME)
@@ -25,7 +25,7 @@
 ## Secret value setting of AWS SecretsManager
 
 **SecretsManager's Secret value** uses JSON format in Plaintext.  
-Here is an example Secret value to use for configuration, and the [**Secret**](https://docs.aws.amazon.com/secretsmanager/latest/userguide/terms-concepts.html) (Corresponds to **AWS_SECRETS_MANAGER_SECRETS_NAME** in the settings module) is named **sample-project-secret**
+Here is an example Secret value to use for configuration, and the [**Secret**](https://docs.aws.amazon.com/secretsmanager/latest/userguide/terms-concepts.html) (Corresponds to **AWS_SECRETS_MANAGER_SECRET_NAME** in the settings module) is named **sample-project-secret**
 
 ```json
 {
@@ -103,9 +103,9 @@ Follow the form of the example below
 from django_secrets import SECRETS
 
 # 2. Enter the settings for Django AWS SecretsManager
-AWS_SECRETS_MANAGER_SECRETS_NAME = 'sample-project-secret'
+AWS_SECRETS_MANAGER_SECRET_NAME = 'sample-project-secret'
 AWS_SECRETS_MANAGER_PROFILE = 'sample-project-secretsmanager'
-AWS_SECRETS_MANAGER_SECRETS_SECTION = 'sample-project:base'
+AWS_SECRETS_MANAGER_SECRET_SECTION = 'sample-project:base'
 AWS_SECRETS_MANAGER_REGION_NAME = 'ap-northeast-2'
 
 # 3. Use SECRETS as a dictionary to get the secrets you want
@@ -120,7 +120,7 @@ SECRET_KEY = SECRETS.get('SECRET_KEY')
 from .base import *
 
 # Use a different secrets section
-AWS_SECRETS_MANAGER_SECRETS_SECTION = 'sample-project:dev'
+AWS_SECRETS_MANAGER_SECRET_SECTION = 'sample-project:dev'
 
 # Use SECRETS as a dictionary to get the secrets you want
 AWS_STORAGE_BUCKET_NAME = SECRETS['AWS_STORAGE_BUCKET_NAME']
