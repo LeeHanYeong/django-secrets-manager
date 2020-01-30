@@ -100,7 +100,7 @@ Follow the form of the example below
 ## settings/base.py
 
 # 1. Import the SECRETS instance of the library
-from aws_secrets import SECRETS
+from django_secrets import SECRETS
 
 # 2. Enter the settings for Django AWS SecretsManager
 AWS_SECRETS_MANAGER_SECRETS_NAME = 'sample-project-secret'
