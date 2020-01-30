@@ -81,10 +81,11 @@ class AWSSecretsManagerSecrets(Secrets):
             credentials['aws_secret_access_key'] = secret_key
         elif profile:
             credentials['profile_name'] = profile
-        else:
-            raise CredentialsNotExists()
         credentials['region_name'] = region_name
         session = boto3.session.Session(**credentials)
+
+        if session.get_credentials() is None:
+            raise CredentialsNotExists()
         return session.client('secretsmanager')
 
     def get_secret_section(
