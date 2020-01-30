@@ -117,6 +117,10 @@ class AWSSecretsManagerSecrets(Secrets):
             client = self.get_client(settings_module=settings_module)
             self._secrets[secret_name] = json.loads(client.get_secret_value(SecretId=secret_name)['SecretString'])
         secrets = self._secrets[secret_name]
+
+        # if no section is given, returns the entire Secret
+        if not section:
+            return secrets
         for section_key in section.split(':'):
             secrets = secrets[section_key]
         return secrets
