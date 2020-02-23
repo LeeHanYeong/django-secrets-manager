@@ -62,7 +62,10 @@ class AWSSecretsManagerSecrets(Secrets):
     secret_key_names = ('AWS_SECRETS_MANAGER_SECRET_ACCESS_KEY', 'AWS_SECRET_ACCESS_KEY')
     region_name_names = ('AWS_SECRETS_MANAGER_REGION_NAME', 'AWS_REGION_NAME')
 
-    def __init__(self):
+    def __init__(self, settings_module=None):
+        # Explicitly given settings module
+        self.settings_module = settings_module
+
         self._secrets = {}
         settings_module = os.environ.get(ENVIRONMENT_VARIABLE)
         mod = importlib.import_module(settings_module)
@@ -110,8 +113,12 @@ class AWSSecretsManagerSecrets(Secrets):
                  > This section string represents the 'lhy' object
         :return: dict or list
         """
-        frame = inspect.stack()[3][0]
-        settings_module = inspect.getmodule(frame)
+        # If a settings module is explicitly given, use that module
+        if self.settings_module:
+            settings_module = self.settings_module
+        else:
+            frame = inspect.stack()[3][0]
+            settings_module = inspect.getmodule(frame)
 
         if secret_name not in self._secrets:
             client = self.get_client(settings_module=settings_module)
