@@ -68,6 +68,13 @@ Then enter the profile name in **AWS_SECRETS_MANAGER_PROFILE** (or AWS_PROFILE) 
 AWS_SECRETS_MANAGER_PROFILE = 'sample-project-secrets-manager'
 ```
 
+Or using **AWS_ACCESS_KEY_ID**, **AWS_SECRET_ACCESS_KEY**
+
+```python
+# settings.py
+AWS_ACCESS_KEY_ID = 'aws-access-key-id'
+AWS_SECRET_ACCESS_KEY = 'aws-secret-access-key'
+```
 ### 2. Use environment variables
 
 > It is recommended to use in distribution or CI / CD environment.
