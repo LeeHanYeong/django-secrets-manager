@@ -2,13 +2,14 @@ import importlib
 import inspect
 import json
 import os
+from json import JSONDecodeError
 from typing import Sequence, Union, Dict, Optional
 
 from django.conf import ENVIRONMENT_VARIABLE
 from django.core.exceptions import ImproperlyConfigured
 
 from .secrets import Secrets
-from ..utils import setting
+from ..utils import setting, SettingKeyNotExists
 
 try:
     import boto3.session
@@ -64,9 +65,13 @@ class AWSSecretsManagerSecrets(Secrets):
 
     def __init__(self, settings_module=None):
         # Explicitly given settings module
-        self.settings_module = settings_module
+        if isinstance(settings_module, str):
+            self.initial_settings_module = importlib.import_module(settings_module)
+        else:
+            self.initial_settings_module = settings_module
 
         self._secrets = {}
+
         settings_module = os.environ.get(ENVIRONMENT_VARIABLE)
         mod = importlib.import_module(settings_module)
         if not hasattr(mod, 'SECRET_KEY'):
@@ -114,8 +119,8 @@ class AWSSecretsManagerSecrets(Secrets):
         :return: dict or list
         """
         # If a settings module is explicitly given, use that module
-        if self.settings_module:
-            settings_module = self.settings_module
+        if self.initial_settings_module:
+            settings_module = self.initial_settings_module
         else:
             frame = inspect.stack()[3][0]
             settings_module = inspect.getmodule(frame)
@@ -133,8 +138,13 @@ class AWSSecretsManagerSecrets(Secrets):
         return secrets
 
     def _get_section(self):
-        secret_name = setting(self.secret_name_names, raise_exception=True)
-        secret_section = setting(self.secret_section_names)
+        """
+        Get the SecretsManager's settings from the Django settings module and return a specific section of the Secret
+        ** If a settings module is specified in the constructor of the class, it is taken from that module.
+        :return:
+        """
+        secret_name = setting(self.secret_name_names, settings_module=self.initial_settings_module, raise_exception=True)
+        secret_section = setting(self.secret_section_names, settings_module=self.initial_settings_module)
         section = self.get_secret_section(secret_name, secret_section)
         return section
 
