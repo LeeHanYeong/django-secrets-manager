@@ -21,7 +21,7 @@ def setting(available_names, default=None, settings_module=None, lookup_env=True
         frame = stack[3][0]
         settings_module = inspect.getmodule(frame)
 
-    if not isinstance(available_names, Iterable):
+    if isinstance(available_names, str) or not isinstance(available_names, Iterable):
         available_names = [available_names]
 
     for name in available_names:
