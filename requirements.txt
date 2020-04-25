@@ -2,6 +2,10 @@
 boto3
 django
 
+# install_develop_requirements
+pytest
+pytest-cov
+
 # PyPI deploy
 twine
 setuptools
