@@ -38,7 +38,7 @@ class TestSetting:
         os.environ.setdefault('AWS_ENVIRON_SECRET_NAME', self.AWS_SECRET_NAME)
         value = setting(names='AWS_ENVIRON_SECRET_NAME', settings_module=settings)
 
-        assert value ==self.AWS_SECRET_NAME
+        assert value == self.AWS_SECRET_NAME
 
     def test_key_not_exists(self):
         value = setting(names='NOT_EXISTS_KEY', settings_module=settings)
