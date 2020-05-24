@@ -2,6 +2,16 @@
 
 **Django SecretsManager** is a package that helps you manage the secret values used by Django through variable services.
 
+
+
+## Installation
+
+```
+pip install django-secrets-manager
+```
+
+
+
 ## Requirements
 
 - Python >= 3.6
